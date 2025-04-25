@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     timezone: str = "UTC"
 
+    redis_url: str = ""  # Format: redis://username:password@host:port/db or rediss://username:password@host:port/db
     redis_host: str = "redis"
     redis_password: str = ""
     redis_username: str = ""

@@ -44,11 +44,19 @@ services:
     image: antonk0/arq-ui:latest
     restart: unless-stopped
     environment:
-      - REDIS_HOST=redis.host.com
-      - REDIS_PASSWORD=your_password
-      - REDIS_PORT=6379
-      - REDIS_SSL=False
-      - REDIS_DB=0
+      # Option 1: Use REDIS_URL for managed Redis instances
+      - REDIS_URL=redis://username:password@redis.host.com:6379/0
+      # OR use rediss:// for SSL/TLS connections:
+      # - REDIS_URL=rediss://username:password@redis.host.com:6379/0
+      
+      # Option 2: Use individual Redis parameters
+      # - REDIS_HOST=redis.host.com
+      # - REDIS_USERNAME=your_username
+      # - REDIS_PASSWORD=your_password
+      # - REDIS_PORT=6379
+      # - REDIS_SSL=False
+      # - REDIS_SSL_CERT_REQS=none
+      # - REDIS_DB=0
     ports:
       - 8000:8000
 ```
@@ -77,11 +85,14 @@ Possible environment variables:
 
 | Variable | Description | Default Value |
 | -------- | ----------- | ------------- |
-| `REDIS_HOST` | Address of the Redis server | `redis` |
-| `REDIS_PORT` | Port of the Redis server | `6379` |
-| `REDIS_PASSWORD` | Password for connecting to Redis | `""` (no password) |
-| `REDIS_SSL` | Whether to use SSL for connecting to Redis | `False` |
-| `REDIS_DB` | Redis database number | `0` |
+| `REDIS_URL` | Complete Redis connection URL (e.g., redis://username:password@host:port/db or rediss://username:password@host:port/db) | `""` |
+| `REDIS_HOST` | Address of the Redis server (ignored if REDIS_URL is provided) | `redis` |
+| `REDIS_PORT` | Port of the Redis server (ignored if REDIS_URL is provided) | `6379` |
+| `REDIS_USERNAME` | Username for connecting to Redis (ignored if REDIS_URL is provided) | `""` |
+| `REDIS_PASSWORD` | Password for connecting to Redis (ignored if REDIS_URL is provided) | `""` (no password) |
+| `REDIS_SSL` | Whether to use SSL for connecting to Redis (ignored if REDIS_URL is provided) | `False` |
+| `REDIS_SSL_CERT_REQS` | SSL certificate requirements (ignored if REDIS_URL is provided) | `none` |
+| `REDIS_DB` | Redis database number (ignored if REDIS_URL is provided) | `0` |
 | `MAX_JOBS` | Maximum number of tasks that can be displayed in the interface | `50000` |
 | `REQUEST_SEMAPHORE_JOBS` | Number of tasks that can be requested simultaneously | `5` |
 | `QUEUE_NAME` | Name of the queue in Redis | `arq:queue` |
