@@ -4,17 +4,19 @@ from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import arq
-import arq.constants
-import arq.jobs
 from arq import create_pool
 from arq.connections import RedisSettings
-from arq.jobs import DeserializationError
+from arq.jobs import DeserializationError, JobStatus as ArqJobStatus
 from arq.jobs import Job as ArqJob
 from core.cache import LRUCache
 from core.config import Settings, get_app_settings
 from schemas.job import ColorStatistics, Job, JobCreate, JobStatus, JobsTimeStatistics
 
 settings: Settings = get_app_settings()
+
+# Define constants from arq 0.26.0
+JOB_KEY_PREFIX = 'arq:job:'
+RESULT_KEY_PREFIX = 'arq:result:'
 
 
 class JobService:
@@ -34,8 +36,8 @@ class JobService:
     async def get_status(self) -> dict[str, str]:
         """Get status redis."""
         redis = await create_pool(self.redis_settings)
-        keys_queued = await redis.keys(arq.constants.job_key_prefix + "*")
-        keys_results = await redis.keys(arq.constants.result_key_prefix + "*")
+        keys_queued = await redis.keys(JOB_KEY_PREFIX + "*")
+        keys_results = await redis.keys(RESULT_KEY_PREFIX + "*")
 
         processed_keys = keys_queued + keys_results
         return {"jobs_len": str(len(processed_keys))}
@@ -52,16 +54,16 @@ class JobService:
             return cached_result
 
         async with semaphore:
-            key_id_without_prefix = key_id.replace(arq.constants.job_key_prefix, "").replace(
-                arq.constants.result_key_prefix,
+            key_id_without_prefix = key_id.replace(JOB_KEY_PREFIX, "").replace(
+                RESULT_KEY_PREFIX,
                 "",
             )
 
             arq_job = ArqJob(key_id_without_prefix, redis, _queue_name=settings.queue_name)
             status = await arq_job.status()
 
-            if status == arq.jobs.JobStatus.complete:
-                complete_key: str = arq.constants.result_key_prefix + key_id_without_prefix
+            if status == ArqJobStatus.complete:
+                complete_key: str = RESULT_KEY_PREFIX + key_id_without_prefix
                 redis_raw = await redis.get(complete_key)
                 try:
                     job_result: arq.jobs.JobResult = arq.jobs.deserialize_result(redis_raw)
@@ -90,7 +92,7 @@ class JobService:
                 self.cache.set(key_id, job_schema)
 
             else:
-                keys_queued_job = arq.constants.job_key_prefix + key_id_without_prefix
+                keys_queued_job = JOB_KEY_PREFIX + key_id_without_prefix
                 redis_raw = await redis.get(keys_queued_job)
                 job: arq.jobs.JobDef = arq.jobs.deserialize_job(redis_raw)
                 job_schema = Job(
@@ -107,8 +109,8 @@ class JobService:
     async def get_all_jobs(self, max_jobs: int = 50000) -> list[Job]:
         """Get all jobs."""
         redis = await create_pool(self.redis_settings)
-        keys_queued = await redis.keys(arq.constants.job_key_prefix + "*")
-        keys_results = await redis.keys(arq.constants.result_key_prefix + "*")
+        keys_queued = await redis.keys(JOB_KEY_PREFIX + "*")
+        keys_results = await redis.keys(RESULT_KEY_PREFIX + "*")
 
         processed_keys = [key.decode() for key in keys_queued + keys_results]
 
@@ -132,7 +134,7 @@ class JobService:
     async def get_job_by_id(self, job_id: str) -> Job | None:
         """Get job by id."""
         redis = await create_pool(self.redis_settings)
-        key_id = arq.constants.job_key_prefix + job_id
+        key_id = JOB_KEY_PREFIX + job_id
         return await self.fetch_job_info(
             asyncio.Semaphore(self.request_semaphore_jobs),
             redis,

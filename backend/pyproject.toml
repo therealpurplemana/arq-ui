@@ -6,7 +6,7 @@ authors = [
     {name = "Anton Kovalev", email = "antonko@gmail.com"},
 ]
 dependencies = [
-    "arq>=0.25.0",
+    "arq>=0.26.0",
     "pydantic>=2.6.4",
     "uvicorn[standart]>=0.29.0",
     "fastapi>=0.110.0",
