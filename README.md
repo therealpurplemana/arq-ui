@@ -1,7 +1,6 @@
 # arq-ui
 
-This project is a simple interface for monitoring jobs executed using the [arq](https://github.com/samuelcolvin/arq) library.
-
+This is a fork of arq-ui to allow passing REDIS_URL including username. 
 ![arq UI](./docs/screenshot1.png)
 
 ## Features
